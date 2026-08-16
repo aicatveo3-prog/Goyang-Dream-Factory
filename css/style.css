@@ -592,6 +592,17 @@ h1 {
   height: 100%;
   background: center / cover no-repeat;
 }
+.actor {
+  position: absolute;
+  transform: translateX(-50%);
+  width: auto;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+  filter: drop-shadow(0 16px 20px rgba(0, 0, 0, 0.32));
+  z-index: 1;
+}
+.pin { z-index: 2; }
 .pin {
   appearance: none;
   border: 0;
