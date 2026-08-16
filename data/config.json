@@ -1,9 +1,15 @@
 {
   "title": "꿈제작소의 밤",
   "chapter": "1장 · 수집",
-  "tagline": "잡는 게 아니라, 친해지는 것.",
+  "tagline": "청년에게 말 걸어 카드를 모은다. 세 장이면 밤의 문이 열린다.",
+  "howto": [
+    { "label": "오늘 할 일", "text": "사람과 이야기한다" },
+    { "label": "남는 것", "text": "그 사람의 카드" },
+    { "label": "목표", "text": "카드 3장으로 밤의 문을 연다" }
+  ],
+  "guidePlaceId": "stairs",
   "unlockNightAt": 3,
-  "storageKey": "dreamlab-night-v1",
+  "storageKey": "dreamlab-night-v2",
   "attributes": {
     "emotion": {
       "id": "emotion",

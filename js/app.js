@@ -41,7 +41,7 @@
   }
 
   function blankState() {
-    return { v: 1, cards: {}, talked: {}, nightDone: false };
+    return { v: 2, cards: {}, talked: {}, nightDone: false, introDone: false, seenCardTip: false };
   }
 
   function loadState() {
@@ -49,7 +49,7 @@
       const raw = localStorage.getItem(App.data.config.storageKey);
       if (!raw) return blankState();
       const parsed = JSON.parse(raw);
-      return parsed && parsed.v === 1 ? parsed : blankState();
+      return parsed && parsed.v === 2 ? parsed : blankState();
     } catch {
       return blankState();
     }
@@ -114,12 +114,13 @@
   }
 
   async function loadData() {
-    const [config, youths, night] = await Promise.all([
+    const [config, youths, night, intro] = await Promise.all([
       fetch("data/config.json").then((r) => r.json()),
       fetch("data/youths.json").then((r) => r.json()),
       fetch("data/night.json").then((r) => r.json()),
+      fetch("data/intro.json").then((r) => r.json()),
     ]);
-    App.data = { config, youths, night };
+    App.data = { config, youths, night, intro };
     App.state = loadState();
   }
 
@@ -137,8 +138,13 @@
     render();
   }
 
+  function beginPlay() {
+    if (!App.state.introDone && cardCount() === 0) startIntro();
+    else go("map");
+  }
+
   function viewTitle() {
-    const hasSave = cardCount() > 0 || App.state.nightDone;
+    const hasSave = cardCount() > 0 || App.state.nightDone || App.state.introDone;
     return el("section", { class: "screen" }, [
       el("div", {
         class: "title-art",
@@ -147,18 +153,26 @@
       el("div", { class: "kicker" }, App.data.config.chapter),
       el("h1", {}, App.data.config.title),
       el("p", { class: "tagline" }, App.data.config.tagline),
+      el("ol", { class: "howto" },
+        (App.data.config.howto || []).map((step) =>
+          el("li", {}, [
+            el("span", { class: "howto-label" }, step.label),
+            el("span", {}, step.text),
+          ])
+        )
+      ),
       el("div", { class: "title-actions" }, [
         el("button", {
           class: "btn",
-          onclick: () => go("map"),
-        }, hasSave ? "기록 이어하기" : "문을 연다"),
+          onclick: beginPlay,
+        }, hasSave ? "기록 이어하기" : "첫 사람을 만나러 간다"),
         hasSave && el("button", {
           class: "btn ghost",
           onclick: () => {
             if (confirm("모은 카드와 대화를 모두 지울까요?")) {
               App.state = blankState();
               saveState();
-              go("map");
+              beginPlay();
             }
           },
         }, "처음부터"),
@@ -182,49 +196,97 @@
     return youth.short;
   }
 
+  function isGuided() {
+    return App.state.introDone && cardCount() === 0;
+  }
+
+  function viewNightDoor() {
+    const need = App.data.config.unlockNightAt;
+    const count = cardCount();
+    const youths = App.data.youths.youths;
+    const open = nightOpen();
+    const done = App.state.nightDone;
+    const lobby = App.data.config.places.find((p) => p.night);
+    return el("button", {
+      class: `night-door${open && !done ? " is-open" : ""}${done ? " is-done" : ""}`,
+      onclick: () => openPlace(lobby),
+    }, [
+      el("div", { class: "night-door-copy" }, [
+        el("div", { class: "place-floor" }, "폐관 후"),
+        el("div", { class: "place-name" }, "밤의 문"),
+        el("div", { class: "place-meta" },
+          done ? "오늘은 이만. 밤은 다음에."
+            : open ? "문이 열렸다. 주무관이 로비에 남아 있다."
+              : `카드가 열쇠다. ${count}/${need}`),
+      ]),
+      el("div", { class: "keys" },
+        youths.slice(0, need).map((youth) => {
+          const card = App.state.cards[youth.id];
+          return el("div", {
+            class: `key${card ? " is-in" : ""}`,
+            title: youth.name,
+            style: card ? { backgroundImage: `url(${youth.portrait})` } : {},
+          }, card ? "" : (youths.indexOf(youth) + 1));
+        })
+      ),
+    ]);
+  }
+
   function viewMap() {
     const count = cardCount();
     const need = App.data.config.unlockNightAt;
+    const guided = isGuided();
+    const guideId = App.data.config.guidePlaceId;
+    const dayPlaces = App.data.config.places.filter((p) => !p.night);
+    const flash = App.mapHint;
+    App.mapHint = null;
     return el("section", { class: "screen" }, [
       el("div", { class: "topbar" }, [
         el("div", {}, [
           el("div", { class: "kicker" }, "낮"),
           el("h2", {}, "고양꿈제작소"),
         ]),
-        el("button", { class: "chip", onclick: () => go("album") }, `앨범 ${count}/${need}`),
+        el("button", { class: "chip", onclick: () => go("album") }, `카드 ${count}/${need}`),
       ]),
-      ...App.data.config.places.map((place) => {
-        const locked = place.night && !nightOpen();
-        const ready = place.night && nightOpen() && !App.state.nightDone;
+      flash && el("p", { class: "hint flash" }, flash),
+      guided && el("p", { class: "hint" }, "주무관이 2층 계단을 가리켰다. 먼저 거기 가 보자."),
+      ...dayPlaces.map((place) => {
+        const waiting = guided && place.id !== guideId;
+        const guiding = guided && place.id === guideId;
         return el("button", {
-          class: `place${locked ? " is-locked" : ""}${ready ? " is-ready" : ""}`,
+          class: `place${waiting ? " is-wait" : ""}${guiding ? " is-guide" : ""}`,
           style: { backgroundImage: `url(${place.image})` },
           onclick: () => openPlace(place),
         }, [
           el("div", { class: "place-body" }, [
             el("div", { class: "place-floor" }, place.floor),
             el("div", { class: "place-name" }, place.name),
-            el("div", { class: "place-meta" }, placeStatus(place)),
-            locked && el("div", { class: "lock-note" }, `모은 카드 ${count}/${need}`),
+            el("div", { class: "place-meta" },
+              waiting ? "아직 아님. 계단부터." : placeStatus(place)),
           ]),
         ]);
       }),
-      el("p", { class: "progress" }, count < need
-        ? `청년 카드 ${count}/${need} · 모이면 밤이 열린다`
-        : App.state.nightDone
-          ? "1장의 수집은 여기까지."
-          : "카드 세 장. 폐관 안내가 내려와 있다."),
-      count < need && el("p", { class: "hint" }, "장소를 골라 말을 건넨다. 같은 사람도, 어떻게 말하느냐에 따라 카드가 달라진다."),
-      nightOpen() && !App.state.nightDone && el("p", { class: "hint" }, "폐관. 주무관이 로비에 남아 있다. 그림이 또 뒤집혀 있다고 한다."),
+      viewNightDoor(),
+      count > 0 && count < need && el("p", { class: "hint" }, "같은 사람에게 다시 가면 카드가 달라진다. 다른 사람도 만나 보자."),
+      nightOpen() && !App.state.nightDone && el("p", { class: "hint" }, "세 장이 모였다. 아래 문을 열어 보자."),
       App.state.nightDone && el("p", { class: "hint" }, "말은 말렸다. 열쇠는 이미 손에 있다."),
     ]);
   }
 
   function openPlace(place) {
     if (place.night) {
-      if (!nightOpen()) return;
+      if (!nightOpen()) {
+        App.mapHint = "카드 세 장이 모여야 밤의 문이 열린다.";
+        go("map");
+        return;
+      }
       if (App.state.nightDone) return;
       startStory(App.data.night);
+      return;
+    }
+    if (isGuided() && place.id !== App.data.config.guidePlaceId) {
+      App.mapHint = "주무관이 2층 계단을 가리켰다.";
+      go("map");
       return;
     }
     const youth = youthById(place.youthId);
@@ -263,12 +325,29 @@
     go("dialogue");
   }
 
+  function startIntro() {
+    const story = App.data.intro;
+    const encounter = story.encounters[0];
+    App.session = {
+      kind: "intro",
+      storyId: story.id,
+      encIndex: 0,
+      nodeId: encounter.start,
+      scores: {},
+      lastStyle: null,
+      bg: placeById(story.placeId)?.image,
+      portrait: story.portrait,
+    };
+    go("dialogue");
+  }
+
   function currentNode() {
     const s = App.session;
     if (s.kind === "youth") {
       const youth = youthById(s.youthId);
       return youth.encounters[s.encIndex].nodes[s.nodeId];
     }
+    if (s.kind === "intro") return App.data.intro.encounters[0].nodes[s.nodeId];
     return App.data.night.encounters[0].nodes[s.nodeId];
   }
 
@@ -288,6 +367,13 @@
   }
 
   function finishEncounter() {
+    if (App.session.kind === "intro") {
+      App.state.introDone = true;
+      saveState();
+      App.session = null;
+      go("map");
+      return;
+    }
     if (App.session.kind === "youth") {
       const youth = youthById(App.session.youthId);
       applyYouthResult(youth, App.session.encIndex > 0);
@@ -315,6 +401,11 @@
     const speaker = node.speaker || "";
     const canTap = !node.choices;
     const portrait = speaker && speaker !== "나" ? App.session.portrait : "";
+    const forming = App.session.lastStyle
+      && App.data.config.choiceStyles[App.session.lastStyle];
+    const formingAttr = forming ? forming.attribute : null;
+    const isIntro = App.session.kind === "intro";
+    const kicker = isIntro ? "시작" : App.session.kind === "story" ? "폐관 이후" : "대화";
 
     const box = el("section", {
       class: "screen dlg",
@@ -332,9 +423,9 @@
           onclick: (ev) => {
             ev.stopPropagation();
             App.session = null;
-            go("map");
+            go(isIntro ? "title" : "map");
           },
-        }, "← 장소로"),
+        }, isIntro ? "← 처음" : "← 장소로"),
         el("div", { class: "spacer" }),
         el("div", { class: "row", style: { alignItems: "flex-end", marginBottom: "16px" } }, [
           portrait && el("div", { class: "portrait-wrap" }, [
@@ -342,17 +433,19 @@
           ]),
           el("div", {}, [
             speaker && el("div", { class: "speaker-name" }, speaker),
-            el("div", { class: "kicker", style: { marginTop: "4px" } },
-              App.session.kind === "story" ? "폐관 이후" : "대화"),
+            el("div", { class: "kicker", style: { marginTop: "4px" } }, kicker),
           ]),
         ]),
         node.aside && el("p", { class: "aside" }, node.aside),
         el("p", { class: "line" }, nodeText(node)),
-        canTap && el("p", { class: "tap-hint" }, node.end ? "터치해서 남긴다" : "터치해서 계속"),
+        canTap && el("p", { class: "tap-hint" },
+          node.end
+            ? (isIntro ? "터치해서 계단으로" : "터치해서 카드를 본다")
+            : "터치해서 계속"),
         node.choices && el("div", { class: "choices" },
           node.choices.map((choice) =>
             el("button", {
-              class: "choice",
+              class: `choice${choice.style ? ` is-${choice.style}` : ""}`,
               onclick: (ev) => {
                 ev.stopPropagation();
                 pickChoice(choice);
@@ -360,6 +453,13 @@
             }, choice.text)
           )
         ),
+        formingAttr && el("div", { class: `forming ${formingAttr}` }, [
+          el("div", {
+            class: "forming-back",
+            style: { backgroundImage: "url(assets/ui/card-back.jpg)" },
+          }),
+          el("p", {}, "이 말이 카드에 스며들고 있다."),
+        ]),
       ]),
     ]);
     return box;
@@ -387,6 +487,19 @@
       ]),
     ]);
 
+    const count = cardCount();
+    const need = App.data.config.unlockNightAt;
+    const firstCard = !r.evolve && !r.prev && count === 1;
+    if (firstCard && !App.state.seenCardTip) {
+      App.state.seenCardTip = true;
+      saveState();
+    }
+    const nextLabel = App.returnTo === "album"
+      ? "앨범으로"
+      : count >= need && !App.state.nightDone
+        ? "밤의 문이 열렸다"
+        : "다음 사람을 만나러 간다";
+
     const screen = el("section", { class: "screen card-screen" }, [
       el("div", { class: "reveal-kicker" }, r.evolve ? "달라졌다" : "흔적이 남았다"),
       el("div", { class: "reveal-title serif" },
@@ -397,6 +510,9 @@
           ? `같은 자리였던 「${r.prev.title}」이 조금 깊어졌다.`
           : `「${r.prev.title}」에서 「${r.title}」로.`
       ),
+      firstCard && el("p", { class: "coach" }, "같은 사람에게 다시 가면, 카드가 달라진다."),
+      el("p", { class: "door-progress" },
+        count >= need ? "열쇠가 다 모였다." : `밤의 문 · 열쇠 ${count}/${need}`),
       el("div", { class: "spacer" }),
       el("button", {
         class: "btn",
@@ -406,7 +522,7 @@
           App.returnTo = null;
           go(back);
         },
-      }, App.returnTo === "album" ? "앨범으로" : "앨범에 넣는다"),
+      }, nextLabel),
     ]);
 
     requestAnimationFrame(() => {

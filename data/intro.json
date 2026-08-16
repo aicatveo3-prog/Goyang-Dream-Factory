@@ -1,0 +1,30 @@
+{
+  "id": "intro",
+  "name": "주무관",
+  "portrait": "assets/portraits/officer.jpg",
+  "placeId": "lobby",
+  "encounters": [
+    {
+      "id": 1,
+      "start": "intro",
+      "nodes": {
+        "intro": {
+          "aside": "폐관 직전. 1층 로비. 그림 하나가 뒤집혀 있다.",
+          "text": "주무관은 뒤를 보지 않은 채, 액자 각도를 맞추고 있다.",
+          "bg": "assets/places/lobby.jpg",
+          "next": "n1"
+        },
+        "n1": {
+          "speaker": "주무관",
+          "text": "왔어? 애들 아직 있어. 말 걸어 봐. 카드가 생겨.",
+          "next": "n2"
+        },
+        "n2": {
+          "speaker": "주무관",
+          "text": "세 장 모이면, 이 그림 얘기 다시 하자. 2층 계단부터 가 봐. 거기 맨날 앉아 있거든.",
+          "end": true
+        }
+      }
+    }
+  ]
+}
