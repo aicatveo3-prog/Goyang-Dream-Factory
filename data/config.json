@@ -1,0 +1,75 @@
+{
+  "title": "꿈제작소의 밤",
+  "chapter": "1장 · 수집",
+  "tagline": "잡는 게 아니라, 친해지는 것.",
+  "unlockNightAt": 3,
+  "storageKey": "dreamlab-night-v1",
+  "attributes": {
+    "emotion": {
+      "id": "emotion",
+      "name": "감정",
+      "hint": "힘든 이야기를 잘 꺼내는 타입",
+      "habitat": "계단 구석"
+    },
+    "analysis": {
+      "id": "analysis",
+      "name": "분석",
+      "hint": "계획과 데이터를 좋아하는 타입",
+      "habitat": "상담실"
+    },
+    "experience": {
+      "id": "experience",
+      "name": "경험",
+      "hint": "이것저것 해본 게 많은 타입",
+      "habitat": "카페"
+    },
+    "challenge": {
+      "id": "challenge",
+      "name": "도전",
+      "hint": "겁 없이 지르는 타입",
+      "habitat": "창업지원실"
+    },
+    "endurance": {
+      "id": "endurance",
+      "name": "체력",
+      "hint": "묵묵히 버티는 타입",
+      "habitat": "야외벤치"
+    }
+  },
+  "choiceStyles": {
+    "comfort": { "attribute": "emotion", "label": "위로" },
+    "plan": { "attribute": "analysis", "label": "팩트·계획" },
+    "together": { "attribute": "challenge", "label": "같이 해보자" }
+  },
+  "places": [
+    {
+      "id": "stairs",
+      "name": "계단 구석",
+      "floor": "2층",
+      "image": "assets/places/stairs.jpg",
+      "youthId": "seoyoon"
+    },
+    {
+      "id": "counsel",
+      "name": "상담실",
+      "floor": "1층",
+      "image": "assets/places/counsel.jpg",
+      "youthId": "junho"
+    },
+    {
+      "id": "cafe",
+      "name": "카페",
+      "floor": "1층",
+      "image": "assets/places/cafe.jpg",
+      "youthId": "harin"
+    },
+    {
+      "id": "lobby",
+      "name": "로비",
+      "floor": "폐관 후",
+      "image": "assets/places/lobby.jpg",
+      "storyId": "officer",
+      "night": true
+    }
+  ]
+}
