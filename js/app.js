@@ -41,7 +41,7 @@
   }
 
   function blankState() {
-    return { v: 2, cards: {}, talked: {}, nightDone: false, introDone: false, seenCardTip: false };
+    return { v: 2, cards: {}, talked: {}, nightDone: false, introDone: false, seenCardTip: false, lastNode: "lobby" };
   }
 
   function loadState() {
@@ -114,19 +114,22 @@
   }
 
   async function loadData() {
-    const [config, youths, night, intro] = await Promise.all([
+    const [config, youths, night, intro, explore] = await Promise.all([
       fetch("data/config.json").then((r) => r.json()),
       fetch("data/youths.json").then((r) => r.json()),
       fetch("data/night.json").then((r) => r.json()),
       fetch("data/intro.json").then((r) => r.json()),
+      fetch("data/explore.json").then((r) => r.json()),
     ]);
-    App.data = { config, youths, night, intro };
+    App.data = { config, youths, night, intro, explore };
     App.state = loadState();
+    if (!App.state.lastNode) App.state.lastNode = explore.start || "lobby";
+    if (App.look == null) App.look = 0.45;
   }
 
   function render() {
     if (App.screen === "title") return mount(viewTitle());
-    if (App.screen === "map") return mount(viewMap());
+    if (App.screen === "map" || App.screen === "explore") return mount(viewExplore());
     if (App.screen === "dialogue") return mount(viewDialogue());
     if (App.screen === "card") return mount(viewCard());
     if (App.screen === "album") return mount(viewAlbum());
@@ -140,7 +143,7 @@
 
   function beginPlay() {
     if (!App.state.introDone && cardCount() === 0) startIntro();
-    else go("map");
+    else goExplore();
   }
 
   function viewTitle() {
@@ -198,6 +201,144 @@
 
   function isGuided() {
     return App.state.introDone && cardCount() === 0;
+  }
+
+  function goExplore() {
+    if (!App.state.lastNode || !App.data.explore.nodes[App.state.lastNode]) {
+      App.state.lastNode = App.data.explore.start || "lobby";
+    }
+    go("explore");
+  }
+
+  function enterNode(id) {
+    const node = App.data.explore.nodes[id];
+    if (!node) return;
+    App.state.lastNode = id;
+    App.look = node.look == null ? 0.45 : node.look;
+    App.toast = null;
+    saveState();
+    goExplore();
+  }
+
+  function currentExploreNode() {
+    return App.data.explore.nodes[App.state.lastNode] || App.data.explore.nodes.lobby;
+  }
+
+  function showToast(text) {
+    App.toast = text;
+    goExplore();
+    clearTimeout(App.toastTimer);
+    App.toastTimer = setTimeout(() => {
+      if (App.toast === text) {
+        App.toast = null;
+        if (App.screen === "explore") goExplore();
+      }
+    }, 2200);
+  }
+
+  function useHotspot(hs) {
+    if (hs.guideLock && isGuided()) {
+      showToast("주무관이 계단을 가리켰다. 먼저 그리로 가자.");
+      return;
+    }
+    if (hs.type === "go") {
+      enterNode(hs.go);
+      return;
+    }
+    if (hs.type === "note") {
+      showToast(hs.note);
+      return;
+    }
+    if (hs.type === "talk") {
+      const youth = youthById(hs.youthId);
+      const idx = nextEncounterIndex(youth.id);
+      if (idx >= youth.encounters.length) {
+        showToast(`${youth.name} · 오늘은 이만.`);
+        return;
+      }
+      startYouth(youth, idx);
+    }
+  }
+
+  function viewExplore() {
+    const node = currentExploreNode();
+    const count = cardCount();
+    const need = App.data.config.unlockNightAt;
+    const guided = isGuided();
+    const world = el("div", {
+      class: "explore-world",
+      style: { backgroundImage: `url(${node.image})` },
+    });
+    node.hotspots.forEach((hs) => {
+      const locked = hs.guideLock && guided;
+      const glow = (hs.guide && guided) || (hs.type === "talk" && nextEncounterIndex(hs.youthId) === 0 && !locked);
+      const youth = hs.youthId ? youthById(hs.youthId) : null;
+      const pin = el("button", {
+        class: `pin${youth ? " person-pin" : ""}${glow ? " is-guide" : ""}${locked ? " is-locked" : ""}`,
+        style: { left: `${hs.x}%`, top: `${hs.y}%` },
+        "data-hot": hs.id,
+      }, youth
+        ? [el("img", { src: youth.portrait, alt: youth.name }), el("span", {}, hs.label)]
+        : hs.label);
+      pin.addEventListener("pointerup", (ev) => {
+        ev.stopPropagation();
+        if (App.exploreDragged) return;
+        useHotspot(hs);
+      });
+      world.append(pin);
+    });
+
+    const view = el("div", { class: "explore-view" }, [world]);
+    const screen = el("section", { class: "screen explore" }, [
+      view,
+      el("div", { class: "explore-top" }, [
+        node.back
+          ? el("button", { class: "back-mini", onclick: () => enterNode(node.back) }, "← 뒤로")
+          : el("div", { class: "explore-place" }, [
+              el("div", { class: "kicker" }, "낮"),
+              el("div", { class: "place-name", style: { fontSize: "16px", margin: 0 } }, node.name),
+            ]),
+        el("button", { class: "chip", onclick: () => go("album") }, `카드 ${count}/${need}`),
+      ]),
+      el("div", { class: "explore-foot" }, [
+        node.back && el("div", { class: "explore-place", style: { marginBottom: "8px" } }, node.name),
+        viewNightDoor(),
+        el("p", { class: "hint" }, App.toast || node.hint),
+      ]),
+    ]);
+
+    requestAnimationFrame(() => bindExploreLook(view, world));
+    return screen;
+  }
+
+  function bindExploreLook(view, world) {
+    const apply = () => {
+      const max = Math.max(0, world.clientWidth - view.clientWidth);
+      const x = Math.max(0, Math.min(1, App.look == null ? 0.45 : App.look));
+      world.style.transform = `translateX(${-x * max}px)`;
+    };
+    apply();
+    let sx = 0;
+    let start = App.look || 0;
+    App.exploreDragged = false;
+    view.addEventListener("pointerdown", (ev) => {
+      if (ev.target.closest(".pin")) return;
+      sx = ev.clientX;
+      start = App.look || 0;
+      App.exploreDragged = false;
+      view.classList.add("is-drag");
+      view.setPointerCapture(ev.pointerId);
+    });
+    view.addEventListener("pointermove", (ev) => {
+      if (!view.classList.contains("is-drag")) return;
+      const dx = ev.clientX - sx;
+      if (Math.abs(dx) > 6) App.exploreDragged = true;
+      const max = Math.max(1, world.clientWidth - view.clientWidth);
+      App.look = Math.max(0, Math.min(1, start - dx / max));
+      apply();
+    });
+    view.addEventListener("pointerup", () => view.classList.remove("is-drag"));
+    view.addEventListener("pointercancel", () => view.classList.remove("is-drag"));
   }
 
   function viewNightDoor() {
@@ -277,7 +418,7 @@
     if (place.night) {
       if (!nightOpen()) {
         App.mapHint = "카드 세 장이 모여야 밤의 문이 열린다.";
-        go("map");
+        goExplore();
         return;
       }
       if (App.state.nightDone) return;
@@ -286,7 +427,7 @@
     }
     if (isGuided() && place.id !== App.data.config.guidePlaceId) {
       App.mapHint = "주무관이 2층 계단을 가리켰다.";
-      go("map");
+      goExplore();
       return;
     }
     const youth = youthById(place.youthId);
@@ -369,9 +510,10 @@
   function finishEncounter() {
     if (App.session.kind === "intro") {
       App.state.introDone = true;
+      App.state.lastNode = "lobby";
       saveState();
       App.session = null;
-      go("map");
+      goExplore();
       return;
     }
     if (App.session.kind === "youth") {
@@ -396,7 +538,7 @@
 
   function viewDialogue() {
     const node = currentNode();
-    if (!node) return viewMap();
+    if (!node) return viewExplore();
     if (node.bg) App.session.bg = node.bg;
     const speaker = node.speaker || "";
     const canTap = !node.choices;
@@ -423,7 +565,7 @@
           onclick: (ev) => {
             ev.stopPropagation();
             App.session = null;
-            go(isIntro ? "title" : "map");
+            go(isIntro ? "title" : "explore");
           },
         }, isIntro ? "← 처음" : "← 장소로"),
         el("div", { class: "portrait-stage" }, [
@@ -466,7 +608,7 @@
 
   function viewCard() {
     const r = App.lastReveal;
-    if (!r) return viewMap();
+    if (!r) return viewExplore();
     const attr = attrMeta(r.attr);
     const card = el("div", { class: "card", id: "flip-card" }, [
       el("div", {
@@ -516,7 +658,7 @@
       el("button", {
         class: "btn",
         onclick: () => {
-          const back = App.returnTo || "map";
+          const back = App.returnTo || "explore";
           App.lastReveal = null;
           App.returnTo = null;
           go(back);
@@ -538,7 +680,7 @@
           el("div", { class: "kicker" }, "컬렉션"),
           el("h2", {}, "청년 카드"),
         ]),
-        el("button", { class: "chip", onclick: () => go("map") }, "장소로"),
+        el("button", { class: "chip", onclick: () => goExplore() }, "건물로"),
       ]),
       el("div", { class: "album-grid" },
         App.data.youths.youths.map((youth) => {
@@ -597,7 +739,7 @@
       el("div", { class: "spacer" }),
       el("div", { class: "stack" }, [
         el("button", { class: "btn", onclick: () => go("album") }, "모은 카드를 본다"),
-        el("button", { class: "btn ghost", onclick: () => go("map") }, "낮으로 돌아간다"),
+        el("button", { class: "btn ghost", onclick: () => goExplore() }, "건물로 돌아간다"),
       ]),
     ]);
   }
