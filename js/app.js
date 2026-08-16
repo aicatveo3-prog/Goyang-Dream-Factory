@@ -269,18 +269,6 @@
       class: "explore-world",
       style: { backgroundImage: `url(${node.image})` },
     });
-    if (node.actor) {
-      world.append(el("img", {
-        class: "actor",
-        src: node.actor.src,
-        alt: "",
-        style: {
-          left: `${node.actor.x}%`,
-          bottom: `${node.actor.bottom || 0}%`,
-          height: `${node.actor.h}%`,
-        },
-      }));
-    }
     node.hotspots.forEach((hs) => {
       const locked = hs.guideLock && guided;
       const glow = (hs.guide && guided) || (hs.type === "talk" && nextEncounterIndex(hs.youthId) === 0 && !locked);

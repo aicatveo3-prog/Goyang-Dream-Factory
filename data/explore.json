@@ -6,12 +6,11 @@
       "name": "1층 로비",
       "image": "assets/explore/lobby.jpg",
       "look": 0.5,
-      "hint": "주무관이 로비에 있다. 복도로 들어가면 사람들이 있다.",
+      "hint": "주무관이 그림을 보고 있다. 복도로 들어가면 사람들이 있다.",
       "back": null,
-      "actor": { "src": "assets/actors/officer.png", "x": 80, "bottom": 2, "h": 48 },
       "hotspots": [
-        { "id": "to-hall", "type": "go", "go": "hall", "x": 38, "y": 40, "label": "복도로" },
-        { "id": "officer", "type": "note", "x": 74, "y": 46, "label": "주무관", "note": "애들 아직 있어. 말 걸어 봐. 세 장 모이면 이 그림 얘기 다시 하자." }
+        { "id": "to-hall", "type": "go", "go": "hall", "x": 42, "y": 38, "label": "복도로" },
+        { "id": "officer", "type": "note", "x": 58, "y": 48, "label": "주무관", "note": "애들 아직 있어. 말 걸어 봐. 세 장 모이면 이 그림 얘기 다시 하자." }
       ]
     },
     "hall": {
@@ -32,11 +31,10 @@
       "name": "2층 계단참",
       "image": "assets/explore/stairs.jpg",
       "look": 0.5,
-      "hint": "계단참에 누가 앉아 있다.",
+      "hint": "계단 아래 누가 노트북을 하고 있다.",
       "back": "hall",
-      "actor": { "src": "assets/actors/seoyoon.png", "x": 70, "bottom": 6, "h": 54 },
       "hotspots": [
-        { "id": "talk-seoyoon", "type": "talk", "youthId": "seoyoon", "x": 70, "y": 48, "label": "이서윤", "guide": true }
+        { "id": "talk-seoyoon", "type": "talk", "youthId": "seoyoon", "x": 58, "y": 62, "label": "이서윤", "guide": true }
       ]
     },
     "counsel": {
@@ -46,9 +44,8 @@
       "look": 0.5,
       "hint": "소파에 누가 앉아 노트를 들고 있다.",
       "back": "hall",
-      "actor": { "src": "assets/actors/junho.png", "x": 36, "bottom": 14, "h": 50 },
       "hotspots": [
-        { "id": "talk-junho", "type": "talk", "youthId": "junho", "x": 36, "y": 50, "label": "박준호" }
+        { "id": "talk-junho", "type": "talk", "youthId": "junho", "x": 48, "y": 58, "label": "박준호" }
       ]
     },
     "cafe": {
@@ -58,9 +55,8 @@
       "look": 0.5,
       "hint": "창가에 누가 앉아 있다.",
       "back": "hall",
-      "actor": { "src": "assets/actors/harin.png", "x": 70, "bottom": 6, "h": 52 },
       "hotspots": [
-        { "id": "talk-harin", "type": "talk", "youthId": "harin", "x": 70, "y": 48, "label": "최하린" }
+        { "id": "talk-harin", "type": "talk", "youthId": "harin", "x": 48, "y": 54, "label": "최하린" }
       ]
     }
   }
