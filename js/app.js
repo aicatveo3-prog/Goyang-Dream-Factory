@@ -274,12 +274,10 @@
       const glow = (hs.guide && guided) || (hs.type === "talk" && nextEncounterIndex(hs.youthId) === 0 && !locked);
       const youth = hs.youthId ? youthById(hs.youthId) : null;
       const pin = el("button", {
-        class: `pin${youth ? " person-pin" : ""}${glow ? " is-guide" : ""}${locked ? " is-locked" : ""}`,
+        class: `pin${glow ? " is-guide" : ""}${locked ? " is-locked" : ""}`,
         style: { left: `${hs.x}%`, top: `${hs.y}%` },
         "data-hot": hs.id,
-      }, youth
-        ? [el("img", { src: youth.portrait, alt: youth.name }), el("span", {}, hs.label)]
-        : hs.label);
+      }, hs.label);
       pin.addEventListener("pointerup", (ev) => {
         ev.stopPropagation();
         if (App.exploreDragged) return;
