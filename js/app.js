@@ -408,7 +408,7 @@
     const kicker = isIntro ? "시작" : App.session.kind === "story" ? "폐관 이후" : "대화";
 
     const box = el("section", {
-      class: "screen dlg",
+      class: `screen dlg${portrait ? " has-portrait" : ""}`,
       onclick: (ev) => {
         if (!canTap) return;
         if (ev.target.closest(".back-mini")) return;
@@ -426,39 +426,38 @@
             go(isIntro ? "title" : "map");
           },
         }, isIntro ? "← 처음" : "← 장소로"),
-        el("div", { class: "spacer" }),
-        el("div", { class: "row", style: { alignItems: "flex-end", marginBottom: "16px" } }, [
-          portrait && el("div", { class: "portrait-wrap" }, [
-            el("img", { src: portrait, alt: speaker }),
-          ]),
-          el("div", {}, [
-            speaker && el("div", { class: "speaker-name" }, speaker),
-            el("div", { class: "kicker", style: { marginTop: "4px" } }, kicker),
-          ]),
+        el("div", { class: "portrait-stage" }, [
+          portrait && el("img", { src: portrait, alt: speaker }),
         ]),
-        node.aside && el("p", { class: "aside" }, node.aside),
-        el("p", { class: "line" }, nodeText(node)),
-        canTap && el("p", { class: "tap-hint" },
-          node.end
-            ? (isIntro ? "터치해서 계단으로" : "터치해서 카드를 본다")
-            : "터치해서 계속"),
-        node.choices && el("div", { class: "choices" },
-          node.choices.map((choice) =>
-            el("button", {
-              class: `choice${choice.style ? ` is-${choice.style}` : ""}`,
-              onclick: (ev) => {
-                ev.stopPropagation();
-                pickChoice(choice);
-              },
-            }, choice.text)
-          )
-        ),
-        formingAttr && el("div", { class: `forming ${formingAttr}` }, [
-          el("div", {
-            class: "forming-back",
-            style: { backgroundImage: "url(assets/ui/card-back.jpg)" },
-          }),
-          el("p", {}, "이 말이 카드에 스며들고 있다."),
+        el("div", { class: "dlg-panel" }, [
+          el("div", { class: "speaker-row" }, [
+            speaker && el("div", { class: "speaker-name" }, speaker),
+            el("div", { class: "kicker" }, kicker),
+          ]),
+          node.aside && el("p", { class: "aside" }, node.aside),
+          el("p", { class: "line" }, nodeText(node)),
+          canTap && el("p", { class: "tap-hint" },
+            node.end
+              ? (isIntro ? "터치해서 계단으로" : "터치해서 카드를 본다")
+              : "터치해서 계속"),
+          node.choices && el("div", { class: "choices" },
+            node.choices.map((choice) =>
+              el("button", {
+                class: `choice${choice.style ? ` is-${choice.style}` : ""}`,
+                onclick: (ev) => {
+                  ev.stopPropagation();
+                  pickChoice(choice);
+                },
+              }, choice.text)
+            )
+          ),
+          formingAttr && el("div", { class: `forming ${formingAttr}` }, [
+            el("div", {
+              class: "forming-back",
+              style: { backgroundImage: "url(assets/ui/card-back.jpg)" },
+            }),
+            el("p", {}, "이 말이 카드에 스며들고 있다."),
+          ]),
         ]),
       ]),
     ]);

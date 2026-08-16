@@ -261,6 +261,9 @@ h1 {
   background: center/cover no-repeat;
   filter: saturate(0.85) brightness(0.62);
 }
+.dlg.has-portrait .dlg-bg {
+  filter: saturate(0.45) brightness(0.28);
+}
 .dlg-bg::after {
   content: "";
   position: absolute;
@@ -279,16 +282,32 @@ h1 {
     16px
     calc(14px + var(--safe-b));
 }
-.portrait-wrap {
-  width: 72px;
-  height: 96px;
-  border-radius: 8px;
+.portrait-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-  flex: none;
+  margin: 8px -8px 0;
 }
-.portrait-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.speaker-name { font-family: "Noto Serif KR", serif; font-size: 18px; }
+.portrait-stage img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: top center;
+  filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.45));
+}
+.dlg-panel { flex: none; }
+.speaker-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.speaker-name { font-family: "Noto Serif KR", serif; font-size: 20px; }
 .aside {
   font-size: 13px;
   color: #b7ae9e;
